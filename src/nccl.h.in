@@ -258,4 +258,11 @@ ncclResult_t ncclGroupEnd();
 } // end extern "C"
 #endif
 
+#ifdef __cplusplus
+#include <iostream>
+
+#define DEBUG(os) (os << "KF: " << __FILE__ << ":" << __LINE__ << " [Rank " << getenv("OMPI_COMM_WORLD_RANK") << "] ")
+
+#endif
+
 #endif // end include guard

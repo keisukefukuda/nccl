@@ -13,6 +13,8 @@
 #include <cuda_runtime.h>
 #include <assert.h>
 
+#include <iostream>
+
 #define NET_MAX_IFS 16
 #define NET_MAX_GPUS 32
 
@@ -423,6 +425,12 @@ ncclResult_t netSendProxy(struct ncclProxyArgs* args) {
   if (args->state == ncclProxyOpReady) {
     // Update opCount
     resources->hostRecvMem->opCount = args->opCount;
+    DEBUG(std::cout) << "ncclProxyOnReady: -------------------  " << std::endl;
+    DEBUG(std::cout) << "ncclProxyOnReady: opCount = " << args->opCount << std::endl;
+    DEBUG(std::cout) << "ncclProxyOnReady: resources->netDev = " << resources->netDev << std::endl;
+    DEBUG(std::cout) << "ncclProxyOnReady: resources->useGdr = " << resources->useGdr << std::endl;
+    DEBUG(std::cout) << "ncclProxyOnReady: resources->buffSize = " << resources->buffSize << std::endl;
+    DEBUG(std::cout) << "ncclProxyOnReady: resources->step = " << resources->step << std::endl;
 
     // Round to next multiple of sliceSteps
     resources->step = ROUNDUP(resources->step, args->chunkSteps);
@@ -430,9 +438,26 @@ ncclResult_t netSendProxy(struct ncclProxyArgs* args) {
     args->tail = resources->step;
     args->end = args->head + args->nsteps;
     args->state = ncclProxyOpProgress;
+    DEBUG(std::cout) << "ncclProxyOnReady: args->head = " << args->head << std::endl;
+    DEBUG(std::cout) << "ncclProxyOnReady: args->tail = " << args->tail << std::endl;
+    DEBUG(std::cout) << "ncclProxyOnReady: args->end = " << args->end << std::endl;
+    DEBUG(std::cout) << "ncclProxyOnReady: args->nsteps = " << args->nsteps << std::endl;
+
+    DEBUG(std::cout) << "ncclProxyOnReady: sizesFifo = ";
+    volatile int* sizesFifo = resources->hostRecvMem->sizesFifo;
+    for (int i = 0; i < args->end / NCCL_STEPS; i++) {
+      std::cout << sizesFifo[i] << " ";
+    }
+    std::cout << std::endl;
   }
   if (args->state == ncclProxyOpProgress) {
     args->idle = 1;
+    DEBUG(std::cout) << "ncclProxyOnReady: -------------------  " << std::endl;
+    DEBUG(std::cout) << "ncclProxyOnProgress: args->head = " << args->head << std::endl;
+    DEBUG(std::cout) << "ncclProxyOnProgress: args->tail = " << args->tail << std::endl;
+    DEBUG(std::cout) << "ncclProxyOnProgress: args->end = " << args->end << std::endl;
+    DEBUG(std::cout) << "ncclProxyOnProgress: args->nsteps = " << args->nsteps << std::endl;
+    DEBUG(std::cout) << "ncclProxyOnProgress: args->llMode = " << args->llMode << std::endl;
     if (args->head < args->end) {
       if (args->tail < args->end && args->tail < args->head + NCCL_STEPS) {
         volatile int* sizesFifo = resources->hostRecvMem->sizesFifo;
@@ -467,6 +492,7 @@ ncclResult_t netSendProxy(struct ncclProxyArgs* args) {
           int stepSize = args->channel->buffSize/NCCL_STEPS;
           // Send through network
           int buffSlot = args->tail%NCCL_STEPS;
+          DEBUG(std::cout) << "ncclProxyOnProgress: buffSlot = " << buffSlot << std::endl;
           NCCLCHECK(ncclNetIsend(resources->netSendComm, localMem->buff+buffSlot*stepSize, sizesFifo[buffSlot], resources->mhandle, args->requests+buffSlot));
           if (args->requests[buffSlot] != NULL) {
             sizesFifo[buffSlot] = -1;
