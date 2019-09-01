@@ -261,7 +261,7 @@ ncclResult_t ncclGroupEnd();
 #ifdef __cplusplus
 #include <iostream>
 
-#define DEBUG(os) (os << "KF: " << __FILE__ << ":" << __LINE__ << " [Rank " << getenv("OMPI_COMM_WORLD_RANK") << "] ")
+#define DEBUG(os) (os << "KF: " << __FILE__ << ":" << __LINE__ <<  " " << __FUNCTION__ << " [Rank " << getenv("OMPI_COMM_WORLD_RANK") << "] ")
 
 #endif
 

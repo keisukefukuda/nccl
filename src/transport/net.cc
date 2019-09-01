@@ -445,23 +445,26 @@ ncclResult_t netSendProxy(struct ncclProxyArgs* args) {
 
     DEBUG(std::cout) << "ncclProxyOnReady: sizesFifo = ";
     volatile int* sizesFifo = resources->hostRecvMem->sizesFifo;
-    for (int i = 0; i < args->end / NCCL_STEPS; i++) {
+    for (int i = 0; i < NCCL_STEPS; i++) { // buffSlot = args->tail % NCCL_STEPS
       std::cout << sizesFifo[i] << " ";
     }
     std::cout << std::endl;
   }
   if (args->state == ncclProxyOpProgress) {
     args->idle = 1;
-    DEBUG(std::cout) << "ncclProxyOnReady: -------------------  " << std::endl;
+    DEBUG(std::cout) << "ncclProxyOnProgress: -------------------  " << std::endl;
     DEBUG(std::cout) << "ncclProxyOnProgress: args->head = " << args->head << std::endl;
     DEBUG(std::cout) << "ncclProxyOnProgress: args->tail = " << args->tail << std::endl;
     DEBUG(std::cout) << "ncclProxyOnProgress: args->end = " << args->end << std::endl;
     DEBUG(std::cout) << "ncclProxyOnProgress: args->nsteps = " << args->nsteps << std::endl;
     DEBUG(std::cout) << "ncclProxyOnProgress: args->llMode = " << args->llMode << std::endl;
+    DEBUG(std::cout) << "ncclProxyOnProgress: args->sliceSteps = " << args->sliceSteps << std::endl;
+    DEBUG(std::cout) << "ncclProxyOnProgress: args->chunkSteps = " << args->chunkSteps << std::endl;
     if (args->head < args->end) {
       if (args->tail < args->end && args->tail < args->head + NCCL_STEPS) {
         volatile int* sizesFifo = resources->hostRecvMem->sizesFifo;
         volatile uint64_t* recvTail = &resources->hostRecvMem->tail;
+        DEBUG(std::cout) << "ncclProxyOnProgress: *recvTail = " << *recvTail << std::endl;
         if (args->llMode) {
           int buffSlot = args->tail%NCCL_STEPS;
           int size = sizesFifo[buffSlot];
@@ -487,7 +490,7 @@ ncclResult_t netSendProxy(struct ncclProxyArgs* args) {
               }
             }
           }
-        } else if (args->tail < *recvTail) {
+        } else if (args->tail < *recvTail) { // if (args->llMode)
           struct ncclRecvMem* localMem = resources->useGdr ? resources->devRecvMem : resources->hostRecvMem;
           int stepSize = args->channel->buffSize/NCCL_STEPS;
           // Send through network
