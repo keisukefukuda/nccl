@@ -29,3 +29,6 @@ pkg.%:
 
 pkg.debian.prep: lic
 pkg.txz.prep: lic
+
+sample: sample.cpp
+	mpicxx -Wall -Wextra -O3 -std=c++11 -I$(ABSBUILDDIR)/include -I/usr/local/cuda/include -L$(ABSBUILDDIR)/lib -L/usr/local/cuda/lib64 -o $@ $^ -lnccl -lcudart
