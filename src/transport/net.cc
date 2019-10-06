@@ -253,7 +253,23 @@ static ncclResult_t netGetGdrSupport(int dev, int read, int* useGdr) {
 
   int cudaDev, nvmlDev;
   CUDACHECK(cudaGetDevice(&cudaDev));
-  NCCLCHECK(getNvmlDevice(cudaDev, &nvmlDev))
+  NCCLCHECK(getNvmlDevice(cudaDev, &nvmlDev));
+
+  DEBUG(std::cout) << "netGetGdrSupport: -------------------  " << std::endl;
+  DEBUG(std::cout) << "netGetGdrSupport: cudaDev = " << cudaDev << std::endl;
+  DEBUG(std::cout) << "netGetGdrSupport: nvmlDev = " << nvmlDev << std::endl;
+  DEBUG(std::cout) << "netGetGdrSupport: read = " << read << std::endl;
+  DEBUG(std::cout) << "netGetGdrSupport: HCA = " << dev << std::endl;
+
+  {
+    int gdrReadParam = ncclParamNetGdrRead();
+    DEBUG(std::cout) << "netGetGdrSupport: gdrReadParam = " << gdrReadParam << std::endl;
+  }
+
+  {
+    int netGdrLevel = ncclParamNetGdrLevel();
+    DEBUG(std::cout) << "netGetGdrSupport: netGdrLevel = " << netGdrLevel << std::endl;
+  }
 
   if (read) { // For reads (sends) only enable under certain conditions
     int gdrReadParam = ncclParamNetGdrRead();
@@ -261,6 +277,7 @@ static ncclResult_t netGetGdrSupport(int dev, int read, int* useGdr) {
     if (gdrReadParam < 0) {
        int nvlink;
        NCCLCHECK(ncclNvlinkGpu(&nvlink));
+       DEBUG(std::cout) << "netGetGdrSupport: nvlink = " << nvlink << std::endl;
        if (!nvlink) return ncclSuccess;
     }
   }
@@ -269,17 +286,32 @@ static ncclResult_t netGetGdrSupport(int dev, int read, int* useGdr) {
   int netGdrLevel = ncclParamNetGdrLevel();
   short distance;
   NCCLCHECK(netDistance(cudaDev, dev, &distance));
+  DEBUG(std::cout) << "netGetGdrSupport: Distance " << cudaDev << " <--> " << dev
+                   << " = "<< distance << std::endl;
   if (distance >= netGdrLevel) {
-    INFO(NCCL_NET,"NET/%s : GPU Direct RDMA Disabled for GPU %d[%d] / HCA %d (distance %d >= %d)", ncclNetName(), cudaDev, nvmlDev, dev, distance, netGdrLevel);
+    INFO(NCCL_NET,"NET/%s : GPU Direct RDMA Disabled for GPU %d[%d] / HCA %d (distance %d >= %d)",
+         ncclNetName(), cudaDev, nvmlDev, dev, distance, netGdrLevel);
+    DEBUG(std::cout) << "NET/" << ncclNetName()
+                     << " : GPU Direct RDMA Disabled for "
+                     << "GPU " << cudaDev << "[" << nvmlDev << "] / "
+                     << "HCA " << dev << " (distance " << distance << " >= " << netGdrLevel << ")";
     return ncclSuccess;
   }
 
   // Finally, check if the NIC supports it
   int flags;
   NCCLCHECK(ncclNetPtrSupport(dev, &flags));
+  DEBUG(std::cout) << "netGetGdrSupport: flags = " << flags << std::endl;
+  DEBUG(std::cout) << "netGetGdrSupport: flags & NCCL_PTR_CUDA = " << (flags & NCCL_PTR_CUDA) << std::endl;
   if ((flags & NCCL_PTR_CUDA) == 0) return ncclSuccess;
   *useGdr = 1;
-  INFO(NCCL_NET,"NET/%s : GPU Direct RDMA Enabled for GPU %d[%d] / HCA %d (distance %d < %d), read %d", ncclNetName(), cudaDev, nvmlDev, dev, distance, netGdrLevel, read);
+  DEBUG(std::cout) << "NET/" << ncclNetName()
+                   << " : GPU Direct RDMA Enabled for "
+                   << "GPU " << cudaDev << "[" << nvmlDev << "] / "
+                   << "HCA " << dev << " (distance " << distance << " < " << netGdrLevel << "), "
+                   << "read " << read;
+  INFO(NCCL_NET,"NET/%s : GPU Direct RDMA Enabled for GPU %d[%d] / HCA %d (distance %d < %d), read %d",
+       ncclNetName(), cudaDev, nvmlDev, dev, distance, netGdrLevel, read);
   return ncclSuccess;
 }
 
@@ -426,6 +458,7 @@ ncclResult_t netSendProxy(struct ncclProxyArgs* args) {
     // Update opCount
     resources->hostRecvMem->opCount = args->opCount;
     DEBUG(std::cout) << "ncclProxyOnReady: -------------------  " << std::endl;
+    DEBUG(std::cout) << "ncclProxyOnReady: ncclNetNDev = "  << ncclNetNDev << std::endl;
     DEBUG(std::cout) << "ncclProxyOnReady: opCount = " << args->opCount << std::endl;
     DEBUG(std::cout) << "ncclProxyOnReady: resources->netDev = " << resources->netDev << std::endl;
     DEBUG(std::cout) << "ncclProxyOnReady: resources->useGdr = " << resources->useGdr << std::endl;
